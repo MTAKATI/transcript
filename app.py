@@ -26,4 +26,4 @@ if __name__ == "__main__":      #code block runs when executed in cmd
         youtube_url = input("Enter YouTube URL: \n")
         transcript = get_youtube_transcript(youtube_url)
         print("\n--- TRANSCRIPT ---\n")
-        print(transcript[:500] + "...\n[Truncated]")
+        print(transcript)
