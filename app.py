@@ -17,12 +17,12 @@ def get_youtube_transcript(url: str) -> str:
         ytt = YouTubeTranscriptApi()    #API wrapper object
         transcript_data = ytt.fetch(video_id, languages=['en']) # sends request to Youtube to fetch English transcript for given video_id
 
-        full_text = " ".join([entry['text'] for entry in transcript_data]) # joins all segments together into one continuous readable paragraph
+        full_text = " ".join([entry.text for entry in transcript_data]) # joins all segments together into one continuous readable paragraph
         return full_text        #returns formatted paragraph
     except Exception as e:
         return f"Error fetching transcript: {str(e)}"       # converts error into readable message
 
-    if __name__ == "__main__":      #code block runs when executed in cmd
+if __name__ == "__main__":      #code block runs when executed in cmd
         youtube_url = input("Enter YouTube URL: \n")
         transcript = get_youtube_transcript(youtube_url)
         print("\n--- TRANSCRIPT ---\n")
