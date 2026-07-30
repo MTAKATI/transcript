@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SaaS Video Transcriber</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex items-center justify-center p-4">
+
+    <div class="max-w-3xl w-full bg-slate-900 p-8 rounded-2xl shadow-2xl border border-slate-800">
+        
+        <div class="mb-8 text-center">
+            <h1 class="text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-cyan-400 mb-2">
+                🎬 AI Video Transcriber
+            </h1>
+            <p class="text-slate-400 text-sm">Convert YouTube videos into clean text transcripts instantly.</p>
+        </div>
+
+        <div class="space-y-4">
+            <div>
+                <label for="youtubeUrl" class="block text-sm font-medium text-slate-300 mb-2">
+                    YouTube URL
+                </label>
+                <input 
+                    type="text" 
+                    id="youtubeUrl" 
+                    placeholder="https://www.youtube.com/watch?v=udBL9zW4Gm4" 
+                    class="w-full px-4 py-3 rounded-xl bg-slate-950 border border-slate-700 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
+                >
+            </div>
+
+            <div class="flex gap-4 items-center">
+                <div class="flex-1">
+                    <label for="sourceType" class="block text-xs font-medium text-slate-400 mb-1">
+                        Transcription Strategy
+                    </label>
+                    <select id="sourceType" class="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-slate-300 text-sm focus:outline-none focus:border-indigo-500">
+                        <option value="youtube">YouTube Captions (Fast & Free)</option>
+                        <option value="whisper" disabled>OpenAI Whisper (Coming Soon for Audio Uploads)</option>
+                    </select>
+                </div>
+            </div>
+
+            <button 
+                onclick="fetchTranscript()" 
+                id="submitBtn" 
+                class="w-full bg-indigo-600 hover:bg-indigo-500 font-bold py-3 px-6 rounded-xl shadow-lg transition-all duration-200 flex items-center justify-center gap-2"
+            >
+                <span id="btnText">Generate Transcript</span>
+                <span id="btnSpinner" class="hidden animate-spin h-5 w-5 border-2 border-white border-t-transparent rounded-full"></span>
+            </button>
+        </div>
+
+        <div id="errorContainer" class="hidden mt-6 p-4 bg-red-950/60 border border-red-700/60 text-red-300 text-sm rounded-xl"></div>
+
+        <div id="outputContainer" class="hidden mt-8 space-y-4">
+            <div class="flex justify-between items-center">
+                <span class="text-sm font-semibold text-emerald-400 flex items-center gap-1">
+                    ✓ Transcript Ready
+                </span>
+                <div class="flex gap-2">
+                    <button onclick="copyToClipboard()" class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-1.5 rounded-lg border border-slate-700 transition">
+                        📋 Copy Text
+                    </button>
+                    <button onclick="downloadText()" class="text-xs bg-indigo-950 hover:bg-indigo-900 text-indigo-300 px-3 py-1.5 rounded-lg border border-indigo-800 transition">
+                        📥 Download .txt
+                    </button>
+                </div>
+            </div>
+
+            <textarea 
+                id="transcriptBox" 
+                readonly 
+                rows="12" 
+                class="w-full p-4 rounded-xl bg-slate-950 border border-slate-800 text-slate-300 text-sm font-mono leading-relaxed focus:outline-none resize-y"
+            ></textarea>
+        </div>
+
+    </div>
+
+    <script>
+        const API_BASE_URL = 'http://127.0.0.1:8000';
+
+        async function fetchTranscript() {
+            const urlInput = document.getElementById('youtubeUrl').value.trim();
+            const sourceType = document.getElementById('sourceType').value;
+            const submitBtn = document.getElementById('submitBtn');
+            const btnText = document.getElementById('btnText');
+            const btnSpinner = document.getElementById('btnSpinner');
+            const outputContainer = document.getElementById('outputContainer');
+            const errorContainer = document.getElementById('errorContainer');
+            const transcriptBox = document.getElementById('transcriptBox');
+
+            // Reset UI State
+            outputContainer.classList.add('hidden');
+            errorContainer.classList.add('hidden');
+
+            if (!urlInput) {
+                showError("Please enter a valid YouTube URL.");
+                return;
+            }
+
+            // Set Loading State
+            submitBtn.disabled = true;
+            btnText.innerText = "Transcribing...";
+            btnSpinner.classList.remove('hidden');
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/transcript/`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        url: urlInput,
+                        source_type: sourceType 
+                    })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.detail || "Failed to generate transcript.");
+                }
+
+                transcriptBox.value = data.transcript;
+                outputContainer.classList.remove('hidden');
+            } catch (err) {
+                showError(err.message);
+            } finally {
+                // Reset Button State
+                submitBtn.disabled = false;
+                btnText.innerText = "Generate Transcript";
+                btnSpinner.classList.add('hidden');
+            }
+        }
+
+        function showError(message) {
+            const errorContainer = document.getElementById('errorContainer');
+            errorContainer.innerText = message;
+            errorContainer.classList.remove('hidden');
+        }
+
+        function copyToClipboard() {
+            const text = document.getElementById('transcriptBox').value;
+            navigator.clipboard.writeText(text);
+            alert("Copied transcript to clipboard!");
+        }
+
+        function downloadText() {
+            const text = document.getElementById('transcriptBox').value;
+            const blob = new Blob([text], { type: 'text/plain' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'transcript.txt';
+            a.click();
+            window.URL.revokeObjectURL(url);
+        }
+    </script>
+</body>
+</html>
